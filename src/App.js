@@ -12,6 +12,7 @@ class DateChanger extends Component{
   }
 
   render(){
+    console.log('DONE');
     return(
       <div></div>
     )
