@@ -1,34 +1,8 @@
 import React, { Component } from 'react';
 import './App.css';
-import 'react-dates/initialize';
-import 'react-dates/lib/css/_datepicker.css';
-import { DayPickerSingleDateController } from 'react-dates';
-
-const FULL_URL = 'https://api.nasa.gov/planetary/apod?api_key=JmJsmp7ZLfBzQgxzkXeNjpfBnTSRCveItaOKzgur'
-
-class DateChanger extends Component{
-  constructor(){
-    super();
-  }
-
-  render(){
-    console.log('DONE');
-    return(
-      <div></div>
-    )
-  }
-}
-
-function POADContent (props){
-  return (
-    <div  className='container'>
-      <h1 className='title'>{props.data.title}</h1>
-      <img className='image' src={props.data.url} alt='APOD'></img>
-      <p className='text'>{props.data.date}</p>
-      <p className='text'>{props.data.explanation}</p>
-    </div>
-  )
-}
+import POADContent from './POADContent';
+import Navigation from './Navigation';
+const FULL_URL = 'https://api.nasa.gov/planetary/apod?api_key=JmJsmp7ZLfBzQgxzkXeNjpfBnTSRCveItaOKzgur';
 
 class App extends Component {
   constructor() {
@@ -36,52 +10,58 @@ class App extends Component {
     this.state = {
       data: {},
       date: null,
-      focused: null
+      loading: true
     };
-    this.handleDateChange.bind(this);
-    fetch(FULL_URL)
-      .then(response => response.json())
-      .then((response) => {
-        this.setState({
-          data: response
-        })
-      });
+    this.handleDateChange = this.handleDateChange.bind(this);
 
   }
-  handleDateChange(date) {
-    let smallDate = date._d.toISOString().slice(0, 10);
-    fetch(FULL_URL + '&date=' + smallDate)
+  getData(params) {
+    let url = `${FULL_URL}${params ? params : ''}`
+    fetch(url)
       .then(response => response.json())
       .then((response) => {
-        this.setState({
-          data: response
-        })
+        if (response.media_type === 'image') {
+          const image = new Image();
+          image.onload = () => {
+            this.setState({ data: response, loading: false, image: image })
+          };
+          image.onerror = () => {
+            this.setState({ data: response, loading: false, image: image })
+          };
+          image.src = response.url;
+        }
+        else {
+          this.setState({ data: response, loading: false })
+        }
       });
-    this.setState({
-      date
-    })
-
+  }
+  componentDidMount() {
+    this.getData();
+  }
+  handleDateChange(date) {
+    //let smallDate = date._d.toISOString().slice(0, 10);
+    let year = date._d.getFullYear();
+    let month = date._d.getMonth() + 1;
+    let day = date._d.getDate();
+    let smallDate = `${year}-${month < 10 ? '0' + month : month}-${day}`;
+    this.getData(`&date=${smallDate}`)
+    this.setState({ date, loading: true });
   }
   render() {
     let data = this.state.data;
     return (
       <div>
         <div>
-        
-          <POADContent data={data}/>
-          <DateChanger date={this.state.date} focused={this.state.focused} />
-          <DayPickerSingleDateController
-            onDateChange={date => this.handleDateChange(date)}
-            focused={this.state.focused}
-            onFocusChange={({ focused }) => this.setState({ focused })}
+          <POADContent
+            data={data}
+            image = {this.state.image}
+            loading={this.state.loading}
+          />
+          <Navigation
             date={this.state.date}
-            numberOfMonths={1}
-            displayFormat='YYYY-MM-DD'
-            hideKeyboardShortcutsPanel={true}
-            isOutsideRange={(date) => { return date._d > new Date() }}
+            handleDateChange={this.handleDateChange}
           />
         </div>
-
       </div>
     );
   }
